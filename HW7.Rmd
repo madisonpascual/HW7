@@ -1,0 +1,132 @@
+---
+title: "SDS HW7"
+author: "Madison Pascual - mnp2367"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+GitHub Link: [My Homework 7 Repository](https://github.com/madisonpascual/HW7)
+
+```{r setup, include = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+library(ggplot2)
+library(knitr)
+library(tidyverse)
+library(rvest)
+library(tinytex)
+library(ColourblindR)
+library(mosaic)
+library(MatchIt)
+```
+
+# Homework 7
+
+# Problem 1: Armfolding
+
+## Part A
+
+```{r}
+armfold <- read.csv("armfold.csv")
+
+table(armfold$Sex)
+
+prop_table <- aggregate(LonR_fold ~ Sex, data = armfold, FUN = function(x) c(count = length(x), sum = sum(x), prop = mean(x)))
+
+prop_table
+```
+
+## Part B: What is the observed difference in proportions between the two groups (male minus females)?
+
+```{r}
+0.4716981 - 0.4234234
+```
+
+The observed difference in proportions between the two groups is `0.4716981 - 0.4234234`.
+
+## Part C: Compute a 95% confidence interval for the difference in proportions (males minus females).
+
+```{r}
+x <- c(sum(armfold$LonR_fold[armfold$Sex == "Male"]),
+       sum(armfold$LonR_fold[armfold$Sex == "Female"]))
+n <- c(sum(armfold$Sex == "Male"),
+       sum(armfold$Sex == "Female"))
+
+prop.test(x, n, correct = FALSE)
+```
+The 95% confidence interval computed by using `prop.test` is [-0.084, 0.181]. To do this calculation, I use the SE formula SE = sqrt((p1(1-p1)/n1) + (p2(1-p2)/n2)). The male group had 50/106 left-over-rights, so p1 = 0.4717. The female group had 47/111 left-over-rights, so p2 = 0.4234. Plugging these values in gives me a standard error or ~0.0675. As for the 95% confidence interval, I used a critical z value of 1.96, which comes from the standard normal distribution. The value of 1.96 includes the middle 95% of the distribution and shows the range we expect the true difference in proportions to lie in with 95% confidence. Then the confidence interval is calculated as the difference in proportions plus or minus 1.96 x the standard error (0.0675), giving a confidence interval of [-0.084, 0.181]. 
+
+## Part D: Interpret your confidence interval in context by completing the blanks in this sentence: “If we were to (blank 1), then we would expect that (blank 2).
+
+If I were to repeat this study several times, then we would expect that approximately 95% of the confidence intervals would contain the true difference in the proportion of males and females who fold their left arm on top.
+
+## Part E: In your own words, what does the standard error you calculated above represent? What is it measuring?
+
+The standard error measures the typical variation we would expect to see in the difference between sample proportions if we were to repeat the experiment many times with new samples. In the context of this problem, it measures how much the difference between males and females folding their left arm on top fluctuates due to random sampling.
+
+## Part F: What does the term sampling distribution refer to in this context? Be specific about, what is varying from sample to sample, and what stays fixed.
+
+The sampling distribution refers to the distribution of possible values for the difference in sample proportions (male - female). What varies from sample to sample is the difference in proportions and what stays fixed is the true population proportions of left-top males and females.
+
+## Part G: What mathematical result or theorem justifies using a normal distribution to approximate the sampling distribution of the difference in sample proportions?
+
+The Central Limit Theorem justifies using a normal distribution because it says that when the sample sizes are big enough, the sample distribution or difference in proportions is going to be normal, even if the data itself isn't. In the context of the problem, both males and females have large enough sample sizes and the proportions are close to 0.5, so we can assume the normal approximation is reasonable.
+
+## Part H: . Suppose your 95% confidence interval for the difference in proportions was [-0.01, 0.30]. Based on this, what would you say to someone who claims “there’s no sex difference in arm folding”?
+
+To someone that claims "there's no sex difference in arm folding," I would reply that our data doesn't prove or disprove their claim. Our evidence is inconclusive because the confidence interval of [-0.01, 0.30] includes zero, so we can't reject the null hypothesis that there is no difference between sexes. However, the confidence interval has a big range and is mostly positive, so if there is an actual difference, it could be up to 30%.
+
+## Part I: . Imagine repeating this experiment many times with different random samples of university students. Would the confidence interval be different across samples? Why? What should be true about the collection of all those intervals?
+
+Yes, the confidence interval would be different between every sample. This is because each sample would have different data. But if the study was repeated with a 95% confidence interval every time, 95% of those intervals would contain the actual population difference in proportions.
+
+# Problem 2: Get out the vote
+
+## Part A
+```{r}
+turnout <- read.csv("turnout.csv")
+
+table(turnout$voted1996, turnout$voted1998)
+prop.table(table(turnout$voted1996, turnout$voted1998))
+
+prop.test(
+  x = c(sum(turnout$voted1998[turnout$GOTV_call == 1]),
+        sum(turnout$voted1998[turnout$GOTV_call == 0])),
+  n = c(sum(turnout$GOTV_call == 1),
+        sum(turnout$GOTV_call == 0)), correct = FALSE
+)
+```
+The proportion of people who received a call and voted in 1998 is 0.648 while the proportion of people who didn't receive a call and voted in 1998 is 0.444. The 95% confidence interval is [0.143, 0.264], which means that people who received a call her between 14.3% and 26.4% more likely to vote in the election.
+
+## Part B
+```{r}
+# Create a contingency table
+contingency_table <- table(turnout$voted1996, turnout$GOTV_call)
+prop.table(contingency_table)
+
+# Perform the 2-sample test for equality of proportions
+prop.test(contingency_table)
+```
+## Part C
+```{r}
+match_model <- matchit(
+  GOTV_call ~ voted1996 + AGE + MAJORPTY,
+  data = turnout,
+  method = "nearest",
+  ratio = 5
+)
+matched_data <- match.data(match_model)
+
+mean(matched_data$voted1998[matched_data$GOTV_call == 1])
+mean(matched_data$voted1998[matched_data$GOTV_call == 0])
+
+prop.test(
+  x = c(sum(matched_data$voted1998[matched_data$GOTV_call == 1]),
+        sum(matched_data$voted1998[matched_data$GOTV_call == 0])),
+  n = c(sum(matched_data$GOTV_call == 1),
+        sum(matched_data$GOTV_call == 0)),
+  correct = FALSE
+)
+```
+The dataset is matched with the `GOTV_call` as the treatment, and ``voted1996`, `AGE`, and `MAJORPTY` as matching or balancing variables. The proprtion of people who voted and got a call is 0.648 while the proportion of people who voted and did not get a call is 0.569. The difference in the two proportions is approximately 0.079, and the confidence interval is [0.0129, 0.144]. This suggests significance even after adjusting for confounding variables. 
+
+Even before the data was adjusted for confounding variables, the difference in proportions was about 20%. After adjusting, the difference was approximately 8%. With this, we can conclude that the GOTV calls did in fact increase voter turnout, just not as drastically as initially perceived before adjusting for confounders.
